@@ -6,9 +6,9 @@ const mongoose = require("mongoose");
 const postSchema = mongoose.Schema({
   title: { type: String, required: true },
   content: { type: String, required: true },
+  created: {type: Date, default: Date.now},
   author: {
     firstName: String,
-    // coord will be an array of string values
     lastName: String
   }
 });
@@ -19,6 +19,7 @@ postSchema.virtual("authorString").get(function() {
 
 postSchema.methods.serialize = function() {
   return {
+    id: this._id,
     title: this.title,
     content: this.content,
     author: this.authorString,
@@ -29,3 +30,4 @@ postSchema.methods.serialize = function() {
 
 
 const Post = mongoose.model("Post", postSchema);
+module.exports = {Post};

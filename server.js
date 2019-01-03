@@ -1,29 +1,21 @@
 const express = require("express");
 const morgan = require("morgan");
 const mongoose = require("mongoose");
-const bprouter = require("./blogPostsRouter");
+mongoose.Promise = global.Promise;
 
 const { PORT, DATABASE_URL } = require("./config");
-const { Restaurant } = require("./models");
+const { Post } = require("./models");
 
 const app = express();
-
-mongoose.Promise = global.Promise;
 
 app.use(morgan("common"));
 app.use(express.json());
 
 // GET requests to /restaurants => return 10 restaurants
-app.get("/blog-posts", (req, res) => {
-  Post.find()
-    .limit(10)
-    // success callback: for each restaurant we got back, we'll
-    // call the `.serialize` instance method we've created in
-    // models.js in order to only expose the data we want the API return.    
+app.get("/posts", (req, res) => {
+  Post.find()   
     .then(posts => {
-      res.json({
-        posts: posts.map(post => post.serialize())
-      });
+      res.json(posts.map(post => post.serialize()));
     })
     .catch(err => {
       console.error(err);
@@ -31,10 +23,8 @@ app.get("/blog-posts", (req, res) => {
     });
 });
 
-app.get("/blog-posts/:id", (req, res) => {
+app.get("/posts/:id", (req, res) => {
   Post
-    // this is a convenience method Mongoose provides for searching
-    // by the object _id property
     .findById(req.params.id)
     .then(post => res.json(post.serialize()))
     .catch(err => {
@@ -43,7 +33,7 @@ app.get("/blog-posts/:id", (req, res) => {
     });
 });
 
-app.post("/blog-posts", (req, res) => {
+app.post("/posts", (req, res) => {
   const requiredFields = ["title", "content", "author"];
   for (let i = 0; i < requiredFields.length; i++) {
     const field = requiredFields[i];
@@ -66,7 +56,7 @@ app.post("/blog-posts", (req, res) => {
     });
 });
 
-app.put("/blog-posts/:id", (req, res) => {
+app.put("/posts/:id", (req, res) => {
   // ensure that the id in the request path and the one in request body match
   if (!(req.params.id && req.body.id && req.params.id === req.body.id)) {
     const message =
@@ -76,9 +66,6 @@ app.put("/blog-posts/:id", (req, res) => {
     return res.status(400).json({ message: message });
   }
 
-  // we only support a subset of fields being updateable.
-  // if the user sent over any of the updatableFields, we udpate those values
-  // in document
   const toUpdate = {};
   const updateableFields = ["title", "content", "author"];
 
@@ -95,10 +82,14 @@ app.put("/blog-posts/:id", (req, res) => {
     .catch(err => res.status(500).json({ message: "Internal server error" }));
 });
 
-app.delete("/blog-posts/:id", (req, res) => {
+app.delete("/posts/:id", (req, res) => {
   Post.findByIdAndRemove(req.params.id)
     .then(post => res.status(204).end())
     .catch(err => res.status(500).json({ message: "Internal server error" }));
+});
+
+app.use('*', function (req, res) {
+  res.status(404).json({ message: 'Not Found' });
 });
 
 let server;
@@ -138,11 +129,6 @@ function closeServer() {
     });
   });
 }
-
-// you need to import `blogPostsRouter` router and route
-
-// requests to HTTP requests to `/blog-posts` to `blogPostsRouter`
-app.use('/blog-posts', bprouter);
 
 if (require.main === module) {
   runServer(DATABASE_URL).catch(err => console.error(err));
